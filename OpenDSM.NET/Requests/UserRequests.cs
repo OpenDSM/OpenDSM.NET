@@ -1,4 +1,3 @@
-using System.Net.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OpenDSM.NET.Exceptions;
@@ -34,14 +33,20 @@ public static class UserRequests
         throw new HttpRequestException($"Server Responded with Error Code {response.StatusCode}");
     }
 
-    public static DSMUser[] GetUserFromQuery(DSMClient client, string query)
+    public static DSMUser[] GetUserFromQuery(DSMClient client, string query, int page, int items_per_page)
     {
         HttpClient http = client.client;
-        using HttpRequestMessage request = new(HttpMethod.Get, $"{HOST}/search/users");
+        using HttpRequestMessage request = new(HttpMethod.Get, $"{HOST}/search/users?query={query}&page={page}&count={items_per_page}");
         using HttpResponseMessage response = http.Send(request);
         if (response.IsSuccessStatusCode)
         {
-            
+            JArray array = JsonConvert.DeserializeObject<JArray>(response.Content.ReadAsStringAsync().Result);
+            DSMUser[] users = new DSMUser[array.Count()];
+            Parallel.For(0, users.Length, i =>
+            {
+                users[i] = new(JsonConvert.SerializeObject(array[0]));
+            });
+            return users;
         }
 
         throw new UnresolvedQueryResultException();
