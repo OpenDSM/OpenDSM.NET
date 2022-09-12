@@ -1,10 +1,16 @@
+using System.Net.Http;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OpenDSM.NET.Exceptions;
 using OpenDSM.NET.Models;
 
 namespace OpenDSM.NET.Requests;
-
+public enum ImageType
+{
+    Profile,
+    Banner
+}
 /// <summary>
 /// For all request made to the "user" endpoint
 /// </summary>
@@ -18,9 +24,7 @@ public static class UserRequests
     /// <returns></returns>
     public static DSMUser GetUser(DSMClient client, int id)
     {
-        HttpClient http = client.client;
-        using HttpRequestMessage request = new(HttpMethod.Get, $"{HOST}/user/{id}");
-        using HttpResponseMessage response = http.Send(request);
+        using HttpResponseMessage response = Get(client, $"/users/{id}");
         if (response.IsSuccessStatusCode)
         {
             return new DSMUser(response.Content.ReadAsStringAsync().Result);
@@ -35,9 +39,7 @@ public static class UserRequests
 
     public static DSMUser[] GetUserFromQuery(DSMClient client, string query, int page, int items_per_page)
     {
-        HttpClient http = client.client;
-        using HttpRequestMessage request = new(HttpMethod.Get, $"{HOST}/search/users?query={query}&page={page}&count={items_per_page}");
-        using HttpResponseMessage response = http.Send(request);
+        using HttpResponseMessage response = Get(client, $"/search/users?query={query}&page={page}&count={items_per_page}");
         if (response.IsSuccessStatusCode)
         {
             JArray array = JsonConvert.DeserializeObject<JArray>(response.Content.ReadAsStringAsync().Result);
@@ -52,4 +54,19 @@ public static class UserRequests
         throw new UnresolvedQueryResultException();
     }
 
+    public static bool UploadImage(DSMClient client, ImageType type, FileStream stream)
+    {
+        MemoryStream ms = new();
+        stream.CopyTo(ms);
+        return UploadImage(client, type, ms);
+    }
+    public static bool UploadImage(DSMClient client, ImageType type, MemoryStream stream)
+    {
+        return UploadImage(client, type, Encoding.UTF8.GetString(stream.GetBuffer()));
+    }
+    public static bool UploadImage(DSMClient client, ImageType type, string base64)
+    {
+        using HttpResponseMessage response = Post(client, $"/images/user/{type}", base64);
+        return response.IsSuccessStatusCode;
+    }
 }
