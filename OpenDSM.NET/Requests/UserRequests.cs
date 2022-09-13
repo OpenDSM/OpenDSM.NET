@@ -13,17 +13,23 @@ public enum ImageType
 /// <summary>
 /// For all request made to the "user" endpoint
 /// </summary>
-public static class UserRequests
+public sealed class UserRequests
 {
+    private readonly DSMClient client;
+    public UserRequests(DSMClient client)
+    {
+        this.client = client;
+    }
+
     /// <summary>
     /// Gets a users information
     /// </summary>
     /// <param name="client">The DSM Client</param>
     /// <param name="id">The users id</param>
     /// <returns></returns>
-    public static DSMUser GetUser(DSMClient client, int id)
+    public DSMUser GetUser(int id)
     {
-        using HttpResponseMessage response = Get(client, $"/users/{id}");
+        using HttpResponseMessage response = client.Get($"/users/{id}");
         if (response.IsSuccessStatusCode)
         {
             return new DSMUser(response.Content.ReadAsStringAsync().Result);
@@ -44,9 +50,9 @@ public static class UserRequests
     /// <param name="page">The page offset</param>
     /// <param name="items_per_page">The number of items per page</param>
     /// <returns></returns>
-    public static DSMUser[] GetUserFromQuery(DSMClient client, string query, int page, int items_per_page)
+    public DSMUser[] GetUserFromQuery(string query, int page, int items_per_page)
     {
-        using HttpResponseMessage response = Get(client, $"/search/users?query={query}&page={page}&count={items_per_page}");
+        using HttpResponseMessage response = client.Get($"/search/users?query={query}&page={page}&count={items_per_page}");
         if (response.IsSuccessStatusCode)
         {
             JArray array = JsonConvert.DeserializeObject<JArray>(response.Content.ReadAsStringAsync().Result);
@@ -69,9 +75,9 @@ public static class UserRequests
     /// <param name="email">The users email</param>
     /// <param name="password">The users password</param>
     /// <returns></returns>
-    public static DSMUser CreateUser(DSMClient client, string username, string email, string password)
+    public DSMUser CreateUser(string username, string email, string password)
     {
-        using HttpResponseMessage response = Post(client, "/user", new KeyValuePair<string, string>[]
+        using HttpResponseMessage response = client.Post("/user", new KeyValuePair<string, string>[]
         {
             new KeyValuePair<string, string>("username",username),
             new KeyValuePair<string, string>("email",email),
@@ -96,9 +102,9 @@ public static class UserRequests
     /// </summary>
     /// <param name="client">The DSM Client</param>
     /// <returns></returns>
-    public static IReadOnlyDictionary<int, string> GetRepositories(DSMClient client)
+    public IReadOnlyDictionary<int, string> GetRepositories()
     {
-        using HttpResponseMessage response = Get(client, "/user/git/repositories");
+        using HttpResponseMessage response = client.Get("/user/git/repositories");
 
         if ((response.Content.Headers.ContentType?.MediaType ?? "").Equals("application/json"))
         {
@@ -120,6 +126,12 @@ public static class UserRequests
         throw new HttpRequestException($"Server didn't respond with JSON!  Server responded with status code {response.StatusCode}, and \"{(response.Content == null ? "content was null" : response.Content.Headers.ContentType == null ? "content type was null" : $"{response.Content.Headers.ContentType}")}\"");
     }
 
+    public bool UpdateUserSetting(string name, string value)
+    {
+        var response = client.Patch($"/user/{name}");
+        return false;
+    }
+
     /// <summary>
     /// Uploads an Image from a path
     /// </summary>
@@ -127,10 +139,10 @@ public static class UserRequests
     /// <param name="type">The type of image</param>
     /// <param name="filePath">The absolute path to file</param>
     /// <returns></returns>
-    public static bool UploadImageFromPath(DSMClient client, ImageType type, string filePath)
+    public bool UploadImageFromPath(ImageType type, string filePath)
     {
         using FileStream stream = new(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        return UploadImage(client, type, stream);
+        return UploadImage(type, stream);
     }
     /// <summary>
     /// Uploads an Image from FileStream
@@ -139,11 +151,11 @@ public static class UserRequests
     /// <param name="type">The type of image</param>
     /// <param name="stream">The file stream</param>
     /// <returns></returns>
-    public static bool UploadImage(DSMClient client, ImageType type, FileStream stream)
+    public bool UploadImage(ImageType type, FileStream stream)
     {
         MemoryStream ms = new();
         stream.CopyTo(ms);
-        return UploadImage(client, type, ms);
+        return UploadImage(type, ms);
     }
     /// <summary>
     /// Uploads an Image from Memory Stream
@@ -152,9 +164,9 @@ public static class UserRequests
     /// <param name="type">The type of image</param>
     /// <param name="stream"></param>
     /// <returns></returns>
-    public static bool UploadImage(DSMClient client, ImageType type, MemoryStream stream)
+    public bool UploadImage(ImageType type, MemoryStream stream)
     {
-        return UploadImage(client, type, Convert.ToBase64String(stream.GetBuffer()));
+        return UploadImage(type, Convert.ToBase64String(stream.GetBuffer()));
     }
 
     /// <summary>
@@ -164,9 +176,9 @@ public static class UserRequests
     /// <param name="type">The type of image</param>
     /// <param name="base64">The base64 representation</param>
     /// <returns></returns>
-    public static bool UploadImage(DSMClient client, ImageType type, string base64)
+    public bool UploadImage(ImageType type, string base64)
     {
-        using HttpResponseMessage response = Post(client, $"/images/user/{type}", base64);
+        using HttpResponseMessage response = client.Post($"/images/user/{type}", base64);
         return response.IsSuccessStatusCode;
     }
 }
