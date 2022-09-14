@@ -3,7 +3,7 @@ namespace OpenDSM.NET.Exceptions;
 
 public class InvalidCredentialsException : Exception
 {
-    public InvalidCredentialsException(UserCredentials credentials, string message = "") :
-    base($"OpenDSM Authentication Credentials provided were invalid!{(string.IsNullOrWhiteSpace(message) ? "" : $"\n{message}")}\n{JsonSerializer.Serialize(credentials)}")
+    public InvalidCredentialsException(string api_key, string message = "") :
+    base($"OpenDSM Authentication Credentials provided were invalid!{(string.IsNullOrWhiteSpace(message) ? "" : $"\n{message}")}\n{JsonSerializer.Serialize(api_key)}")
     { }
 }
