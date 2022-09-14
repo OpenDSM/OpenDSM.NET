@@ -17,16 +17,16 @@ public class DSMUser
     public bool HasGitReadme { get; }
     public bool UseGitReadme { get; }
 
-    internal DSMUser(string json)
+    internal DSMUser(string json) : this(JObject.Parse(json)) { }
+    internal DSMUser(JObject json)
     {
-        JObject user = JsonConvert.DeserializeObject<JObject>(json);
-        ID = (int)user["id"];
-        Username = (string)user["username"];
-        Email = (string)user["email"];
-        About = (string)user["about"];
+        ID = (int)(json["id"] ?? 0);
+        Username = (string)json["username"];
+        Email = (string)json["email"];
+        About = (string)json["about"];
         try
         {
-            CreatedProducts = ((JArray)user["createdProducts"]).Values<int>().ToArray();
+            CreatedProducts = ((JArray)json["createdProducts"]).Values<int>().ToArray();
         }
         catch
         {
@@ -34,13 +34,13 @@ public class DSMUser
         }
         try
         {
-            OwnedProducts = ((JArray)user["ownedProducts"]).Values<int>().ToArray();
+            OwnedProducts = ((JArray)json["ownedProducts"]).Values<int>().ToArray();
         }
         catch
         {
             OwnedProducts = Array.Empty<int>();
         }
-        JObject git = (JObject)user["git"];
+        JObject git = (JObject)json["git"];
         IsDeveloperAccount = (bool)git["isDeveloperAccount"];
         HasGitReadme = (bool)git["hasGitReadme"];
         UseGitReadme = (bool)git["useReadme"];
