@@ -1,4 +1,3 @@
-using System.Net.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OpenDSM.NET.Exceptions;
@@ -27,9 +26,9 @@ public sealed class UserRequests
     /// <param name="client">The DSM Client</param>
     /// <param name="id">The users id</param>
     /// <returns></returns>
-    public DSMUser GetUser(int id)
+    public DSMUser GetUser(int id = -1)
     {
-        using HttpResponseMessage response = client.Get($"/users/{id}");
+        using HttpResponseMessage response = client.Get($"/user/{(id == -1 ? "" : id)}");
         if (response.IsSuccessStatusCode)
         {
             return new DSMUser(response.Content.ReadAsStringAsync().Result);
@@ -50,7 +49,7 @@ public sealed class UserRequests
     /// <param name="page">The page offset</param>
     /// <param name="items_per_page">The number of items per page</param>
     /// <returns></returns>
-    public DSMUser[] GetUserFromQuery(string query, int page, int items_per_page)
+    public DSMUser[] GetUserFromQuery(string query, int page = 0, int items_per_page = 20)
     {
         using HttpResponseMessage response = client.Get($"/search/users?query={query}&page={page}&count={items_per_page}");
         if (response.IsSuccessStatusCode)
@@ -59,7 +58,7 @@ public sealed class UserRequests
             DSMUser[] users = new DSMUser[array.Count()];
             Parallel.For(0, users.Length, i =>
             {
-                users[i] = new(JsonConvert.SerializeObject(array[0]));
+                users[i] = new((JObject)array[0]);
             });
             return users;
         }
@@ -88,7 +87,7 @@ public sealed class UserRequests
             JObject json = JObject.Parse(response.Content.ReadAsStringAsync().Result);
             if (response.IsSuccessStatusCode)
             {
-                return new(JsonConvert.SerializeObject(json["user"]));
+                return new((JObject)json["user"]);
             }
 
             string message = (string)(json["message"] ?? "");
@@ -126,10 +125,37 @@ public sealed class UserRequests
         throw new HttpRequestException($"Server didn't respond with JSON!  Server responded with status code {response.StatusCode}, and \"{(response.Content == null ? "content was null" : response.Content.Headers.ContentType == null ? "content type was null" : $"{response.Content.Headers.ContentType}")}\"");
     }
 
-    public bool UpdateUserSetting(string name, string value)
+    /// <summary>
+    /// Activates developer account
+    /// </summary>
+    /// <param name="git_username">The git username</param>
+    /// <param name="git_token">The git access token</param>
+    /// <returns>If the developer account was successfully activated</returns>
+    public bool ActivateDeveloperAccount(string git_username, string git_token)
     {
-        var response = client.Patch($"/user/{name}");
-        return false;
+        using HttpResponseMessage response = client.Post("/user/git/activate", new KeyValuePair<string, string>[]{
+            new KeyValuePair<string, string>("git_username", git_username),
+            new KeyValuePair<string, string>("git_token", git_token)
+        });
+
+        return response.IsSuccessStatusCode;
+    }
+
+    /// <summary>
+    /// Updates a users profile setting
+    /// </summary>
+    /// <param name="name">Setting Name</param>
+    /// <param name="value">Setting Value</param>
+    /// <returns></returns>
+    public bool UpdateUserSetting(string name, dynamic value)
+    {
+        using HttpResponseMessage response = client.Patch($"/user/{name}", value.ToString());
+        JObject json = JObject.Parse(response.Content.ReadAsStringAsync().Result);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new UnresolvedQueryResultException((string)json["message"]);
+        }
+        return true;
     }
 
     /// <summary>
