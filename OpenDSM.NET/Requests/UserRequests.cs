@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OpenDSM.NET.Exceptions;
@@ -26,9 +27,9 @@ public sealed class UserRequests
     /// <param name="client">The DSM Client</param>
     /// <param name="id">The users id</param>
     /// <returns></returns>
-    public DSMUser GetUser(int id = -1)
+    public DSMUser GetUser(string id = "")
     {
-        using HttpResponseMessage response = client.Get($"/user/{(id == -1 ? "" : id)}");
+        using HttpResponseMessage response = client.Get($"/user/{(string.IsNullOrWhiteSpace(id) ? "" : id)}");
         if (response.IsSuccessStatusCode)
         {
             return new DSMUser(response.Content.ReadAsStringAsync().Result);
@@ -42,6 +43,16 @@ public sealed class UserRequests
     }
 
     /// <summary>
+    /// Performs a query search and returns the first result with an exact match to the username
+    /// </summary>
+    /// <param name="username"></param>
+    /// <returns></returns>
+    public DSMUser? GetUserByUsername(string username)
+    {
+        return GetUsersFromQuery(username).FirstOrDefault(user => user.Username.Equals(username), null);
+    }
+
+    /// <summary>
     /// Searches for user using query
     /// </summary>
     /// <param name="client">The DSM Client</param>
@@ -49,7 +60,7 @@ public sealed class UserRequests
     /// <param name="page">The page offset</param>
     /// <param name="items_per_page">The number of items per page</param>
     /// <returns></returns>
-    public DSMUser[] GetUserFromQuery(string query, int page = 0, int items_per_page = 20)
+    public DSMUser[] GetUsersFromQuery(string query, int page = 0, int items_per_page = 20)
     {
         using HttpResponseMessage response = client.Get($"/search/users?query={query}&page={page}&count={items_per_page}");
         if (response.IsSuccessStatusCode)
@@ -94,6 +105,31 @@ public sealed class UserRequests
             throw new System.Net.WebException($"Unable to create user!\n{message}");
         }
         throw new System.Net.WebException("Unable to create user!");
+    }
+    /// <summary>
+    /// Checks if the user credentials provided are valid or not
+    /// </summary>
+    /// <param name="username">The users username or email</param>
+    /// <param name="password">The users password</param>
+    /// <param name="user">The resulting user if valid or null if not</param>
+    /// <param name="message">The resulting message</param>
+    /// <returns>If the users credentials were valid or not</returns>
+    public bool ValidateUserCredentials(string username, string password, out DSMUser user, out string message)
+    {
+        using HttpResponseMessage response = client.Post("/user/validate", new KeyValuePair<string, string>[]{
+            new KeyValuePair<string, string>("username", username),
+            new KeyValuePair<string, string>("password", password)
+        });
+        if (response.IsSuccessStatusCode)
+        {
+            JObject json = JObject.Parse(response.Content.ReadAsStringAsync().Result);
+            message = (string)json["message"];
+
+            return (user = (bool)json["success"] ? new((JObject)json["user"]) : null) != null;
+        }
+        user = null;
+        message = $"Unknown Error has occurred, status code {response.StatusCode} was returned!";
+        return false;
     }
 
     /// <summary>
