@@ -1,13 +1,11 @@
 
-using System.Text.Json.Serialization;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace OpenDSM.NET.Models;
 
 public class DSMUser
 {
-    public int ID { get; }
+    public string ID { get; }
     public string Username { get; }
     public string Email { get; }
     public string About { get; }
@@ -20,7 +18,7 @@ public class DSMUser
     internal DSMUser(string json) : this(JObject.Parse(json)) { }
     internal DSMUser(JObject json)
     {
-        ID = (int)(json["id"] ?? 0);
+        ID = (string)json["id"];
         Username = (string)json["username"];
         Email = (string)json["email"];
         About = (string)json["about"];
