@@ -49,7 +49,7 @@ public sealed class UserRequests
     /// <returns></returns>
     public DSMUser? GetUserByUsername(string username)
     {
-        return GetUsersFromQuery(username).FirstOrDefault(user => user.Username.Equals(username), null);
+        return Search(username).FirstOrDefault(user => user.Username.Equals(username), null);
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public sealed class UserRequests
     /// <param name="page">The page offset</param>
     /// <param name="items_per_page">The number of items per page</param>
     /// <returns></returns>
-    public DSMUser[] GetUsersFromQuery(string query, int page = 0, int items_per_page = 20)
+    public DSMUser[] Search(string query, int page = 0, int items_per_page = 20)
     {
         using HttpResponseMessage response = client.Get($"/search/users?query={query}&page={page}&count={items_per_page}");
         if (response.IsSuccessStatusCode)
