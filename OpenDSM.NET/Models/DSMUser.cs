@@ -3,14 +3,14 @@ using Newtonsoft.Json.Linq;
 
 namespace OpenDSM.NET.Models;
 
-public class DSMUser
+public sealed class DSMUser
 {
     public string ID { get; }
     public string Username { get; }
     public string Email { get; }
     public string About { get; }
-    public int[] CreatedProducts { get; }
-    public int[] OwnedProducts { get; }
+    public IReadOnlyCollection<int> CreatedProducts { get; }
+    public IReadOnlyCollection<int> OwnedProducts { get; }
     public bool IsDeveloperAccount { get; }
     public bool HasGitReadme { get; }
     public bool UseGitReadme { get; }
