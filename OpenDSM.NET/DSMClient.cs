@@ -9,6 +9,7 @@ public sealed class DSMClient
     private readonly string api_key;
     internal readonly HttpClient client;
     public readonly UserRequests Users;
+    public readonly ProductRequests Products;
 #if DEBUG
     private readonly string HOST = "http://127.0.0.1:8080";
 #else
@@ -24,6 +25,7 @@ public sealed class DSMClient
         this.api_key = api_key;
         client = GetClient();
         Users = new(this);
+        Products = new(this);
     }
 
     private HttpClient GetClient()
